@@ -278,7 +278,6 @@ function updateBreadcrumbs(nodeArray, percentageString, volumeString) {
 
     // Add breadcrumb and label for entering nodes.
     var entering = g.enter().append("svg:g");
-    console.log(entering);
 
     entering.append("svg:polygon")
 	.attr("points", breadcrumbPoints)
@@ -295,7 +294,7 @@ function updateBreadcrumbs(nodeArray, percentageString, volumeString) {
     // Set position for entering and updating nodes.
     g.attr("transform", function(d, i) {
 	var translation = i * b.s + lengthArray.slice(0, i).reduce(add, 0);
-	console.log(d);
+	// console.log(d);
 	return "translate(" + translation + ", 0)";
     });
 
