@@ -270,11 +270,12 @@ function breadcrumbPoints(d, i) {
 // Update the breadcrumb trail to show the current sequence and percentage.
 function updateBreadcrumbs(nodeArray, percentageString, volumeString) {
     var lengthArray = nodeArray.map(function(d) { return d.width; });
-
+    
     // Data join; key function combines name and depth (= position in sequence).
     var g = d3.select("#trail")
 	.selectAll("g")
 	.data(nodeArray, function(d) { return d.name + d.depth; });
+    // console.log(g);
 
     // Add breadcrumb and label for entering nodes.
     var entering = g.enter().append("svg:g");
@@ -290,15 +291,14 @@ function updateBreadcrumbs(nodeArray, percentageString, volumeString) {
 	.attr("text-anchor", "middle")
 	.style("fill", computeTextColor)
 	.text(function(d) { return d.name; });
-
+    
     // Set position for entering and updating nodes.
-    g.attr("transform", function(d, i) {
+    entering.attr("transform", function(d, i) {
 	var translation = i * b.s + lengthArray.slice(0, i).reduce(add, 0);
-	// console.log(d);
 	return "translate(" + translation + ", 0)";
     });
 
-    // Remove exiting nodes.
+        // Remove exiting nodes.
     g.exit().remove();
 
     // Now move and update the percentage at the end.
