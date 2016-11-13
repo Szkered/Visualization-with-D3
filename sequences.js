@@ -1,12 +1,12 @@
-var data_file = "flare.json"
+var data_file = "flare.json";
 
 // Dimensions of sunburst.
 var width = 750;
 var height = 600;
 var radius = Math.min(width, height) / 2;
 
-var x = d3.scale.linear().range([0, 2 * Math.PI]);
-var y = d3.scale.linear().range([0, radius]);
+var x = d3.scaleLinear().range([0, 2 * Math.PI]);
+var y = d3.scaleSqrt().range([0, radius]);
 
 // Breadcrumb dimensions: height, spacing, width of tip/tail.
 var b = {
@@ -14,7 +14,8 @@ var b = {
 };
 
 // Mapping of step names to colors.
-var colors = d3.scale.ordinal()
+// var colors = d3.scaleOrdinal(d3.schemeCategory20);
+var colors = d3.scaleOrdinal()
     .range(["#5687d1","#7b615c","#de783b","#6ab975","#a173d1","#bbbbbb"]);
 
 // Total size of all segments; we set this later, after loading the data.
@@ -27,19 +28,19 @@ var svg = d3.select("#chart").append("svg:svg")
     .attr("id", "container")
     .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
-var partition = d3.layout.partition();
+var partition = d3.partition();
 
-var arc = d3.svg.arc()
-    .startAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x))); })
-    .endAngle(function(d) { return d.x + d.dx; })
-    .innerRadius(function(d) { return Math.sqrt(d.y); })
-    .outerRadius(function(d) { return Math.sqrt(d.y + d.dy); });
+// var arc = d3.arc()
+//     .startAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x0))); })
+//     .endAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x1))); })
+//     .innerRadius(function(d) { return Math.max(0, (d.y0)); })
+// 	.outerRadius(function(d) { return Math.max(0, (d.y1)); });
 
-var arc = d3.svg.arc()
-    .startAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x))); })
-    .endAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x + d.dx))); })
-    .innerRadius(function(d) { return Math.max(0, y(Math.sqrt(d.y))); })
-    .outerRadius(function(d) { return Math.max(0, y(Math.sqrt(d.y + d.dy))); });
+var arc = d3.arc()
+    .startAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x0))); })
+    .endAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x1))); })
+    .innerRadius(function(d) { return Math.max(0, y(d.y0)); })
+    .outerRadius(function(d) { return Math.max(0, y(d.y1)); });
 
 var default_root_string = "of all transaction";
 var current_root_string = default_root_string;
@@ -53,10 +54,12 @@ var display_mode = "size";
 
 // Main function to draw and set up the visualization, once we have the data.
 d3.json(data_file, function(error, root){
+    if (error) throw error;
+
 
     // Basic setup of page elements.
     initializeBreadcrumbTrail();
-    d3.select("#togglelegend").on("click", toggleLegend);
+    // d3.select("#togglelegend").on("click", toggleLegend);
 
     // Bounding circle underneath the sunburst, to make it easier to detect
     // when the mouse leaves the parent g.
@@ -64,48 +67,60 @@ d3.json(data_file, function(error, root){
 	.attr("r", radius)
 	.style("opacity", 0);
 
-    partition
-	.value(function() { return 1; })
-	.nodes(root)
-	.forEach(function(d) {
-	    d.count = d.value;
-	    d.x0 = d.x;
-	    d.dx0 = d.dx;
-	    d.fill = computeFill(d);
-	    d.width = getTextWidth(d.name, "Open Sans 12pt");
-	});
+    root = d3.hierarchy(root);
+    root.sum(function(d) { return d.size; });
+    current_root = root;
+
+
+    // partition
+    // 	.value(function() { return 1; })
+    // 	.nodes(root)
+    // 	.forEach(function(d) {
+    // 	    d.count = d.value;
+    // 	    d.x0 = d.x;
+    // 	    d.dx0 = d.dx;
+    // 	    d.fill = computeFill(d);
+    // 	    d.width = getTextWidth(d.name, "Open Sans 12pt");
+    // 	});
     
     // For efficiency, filter nodes to keep only those large enough to see.
-    nodes = partition
-	.value(function(d) {return d.size; })
-	.nodes(root)
-	.filter(function(d) {
-	    return (d.dx > FILTER_THREASHOLD);
-	});
+    // nodes = partition
+    // 	.value(function(d) {return d.size; })
+    // 	.nodes(root)
+    // 	.filter(function(d) {
+    // 	    return (d.dx > FILTER_THREASHOLD);
+    // 	});
+    // drawLegend(nodes[0]);
+    nodes = partition(root).descendants();
+    nodes.forEach(function(d) {
+	d.name = d.data.name;
+	d.fill = computeFill(d);
+	d.width = getTextWidth(d.name, "Open Sans 12pt");
+    });
     console.log(nodes);
-    drawLegend(nodes[0]);
+    
 
-    var path = svg.datum(root).selectAll("path")
-	.data(nodes)
-	.enter().append("svg:path")
-	.attr("display", function(d) { return d.depth ? "true" : "none"; })
-	.attr("d", arc)
-	.attr("fill-rule", "evenodd")
-	.style("fill", function(d) { return d.fill; })
-	.style("opacity", function(d) { return d.depth ? 1 : 0; })
-	.on("mouseover", mouseover)
-	.on("click", click);
+    var path = svg.selectAll("path")
+	    .data(nodes)
+	    .enter().append("svg:path")
+	    .attr("display", function(d) { return d.depth ? "true" : "none"; })
+	    .attr("d", arc)
+	    .attr("fill-rule", "evenodd")
+	    .style("fill", function(d) { return d.fill; })
+	    .style("opacity", function(d) { return d.depth ? 1 : 0; })
+	    .on("mouseover", mouseover)
+	    .on("click", click);
 
     // Add the mouseleave handler to the bounding circle.
     d3.select("#container").on("mouseleave", mouseleave);
 
     // Add an invisible circle at the center to go back to the previous level
     var center = svg.append("circle")
-	.attr("r", radius / 2.6)
-	.attr("fill", "#fff")
-	.on("click", function() {
-	    click(current_root.parent ? current_root.parent : current_root);
-	});
+    	.attr("r", radius / 2.6)
+    	.attr("fill", "#fff")
+    	.on("click", function() {
+    	    click(current_root.parent ? current_root.parent : current_root);
+    	});
 
     // Get total size of the tree = value of root node from partition.
     totalSize = path.node().__data__.value;
@@ -117,28 +132,34 @@ d3.json(data_file, function(error, root){
 	    ? d.value
 	    : d.count;
 
-	path.data(nodes)
+	// path.data(nodes)
+	svg
 	    .transition()
 	    .duration(1500)
+	    .tween("scale", function() {
+		var xd = d3.interpolate(x.domain(), [d.x0, d.x1]),
+		    yd = d3.interpolate(y.domain(), [d.y0 * d.y0, 1]),
+		    yr = d3.interpolate(y.range(), [d.y0 ? 20 : 0, radius]);
+		return function(t) { x.domain(xd(t)); y.domain(yd(t)).range(yr(t)); };
+	    })
+	    .selectAll("path")
 	    .attr("display", function(d) { return d.depth >= current_root.depth && d.depth !== 0
-					   ? "true"
-					   : "none";})
-	    .attrTween("d", arcTween(d));
-
-	totalSize = current_root.count;
+	    				   ? "true"
+	    				   : "none";})
+	    .attrTween("d", function(d) { return function() { return arc(d); }; });
     };
 });
 
-function arcTween(d) {
-    var xd = d3.interpolate(x.domain(), [d.x, d.x + d.dx]),
-	yd = d3.interpolate(y.domain(), [d.y * d.y, 1]),
-	yr = d3.interpolate(y.range(), [d.y ? 20 : 0, radius]);
-    return function(d, i) {
-	return i
-	    ? function(t) { return arc(d); }
-	: function(t) { x.domain(xd(t)); y.domain(yd(t)).range(yr(t)); return arc(d); };
-    };
-}
+// function arcTween(d) {
+//     var xd = d3.interpolate(x.domain(), [d.x, d.x + d.dx]),
+// 	yd = d3.interpolate(y.domain(), [d.y * d.y, 1]),
+// 	yr = d3.interpolate(y.range(), [d.y ? 20 : 0, radius]);
+//     return function(d, i) {
+// 	return i
+// 	    ? function(t) { return arc(d); }
+// 	: function(t) { x.domain(xd(t)); y.domain(yd(t)).range(yr(t)); return arc(d); };
+//     };
+// }
 
 // Fade all but the current sequence, and show it in the breadcrumb trail.
 function mouseover(d) {
@@ -189,7 +210,7 @@ function mouseleave(d) {
 	.transition()
 	.duration(1000)
 	.style("opacity", 1)
-	.each("end", function() {
+	.on("end", function() {
             d3.select(this).on("mouseover", mouseover);
         });
 
@@ -247,9 +268,8 @@ function breadcrumbPoints(d, i) {
 
 // Update the breadcrumb trail to show the current sequence and percentage.
 function updateBreadcrumbs(nodeArray, percentageString, volumeString) {
-
     var lengthArray = nodeArray.map(function(d) { return d.width; });
-    
+
     // Data join; key function combines name and depth (= position in sequence).
     var g = d3.select("#trail")
 	.selectAll("g")
@@ -257,6 +277,7 @@ function updateBreadcrumbs(nodeArray, percentageString, volumeString) {
 
     // Add breadcrumb and label for entering nodes.
     var entering = g.enter().append("svg:g");
+    console.log(entering);
 
     entering.append("svg:polygon")
 	.attr("points", breadcrumbPoints)
@@ -273,6 +294,7 @@ function updateBreadcrumbs(nodeArray, percentageString, volumeString) {
     // Set position for entering and updating nodes.
     g.attr("transform", function(d, i) {
 	var translation = i * b.s + lengthArray.slice(0, i).reduce(add, 0);
+	console.log(d);
 	return "translate(" + translation + ", 0)";
     });
 
@@ -373,8 +395,8 @@ function computeColorDiff(hex1, hex2) {
 
 function computeFill(d) {
     return current_depth >=1
-	? colors(d.name)
-	: colors((d.children ? d : d.parent).name);
+	? colors(d.data.name)
+	: colors((d.children ? d : d.parent).data.name);
 }
 
 function add(a, b){
