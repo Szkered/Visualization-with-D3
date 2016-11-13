@@ -44,13 +44,10 @@ var arc = d3.arc()
 
 var default_root_string = "of all transaction";
 var current_root_string = default_root_string;
-var current_depth = 1;
 var current_root = null;
 
 var FILTER_THREASHOLD = 0.0001;
-var nodes = null;
 var display_mode = "size";
-
 
 // Main function to draw and set up the visualization, once we have the data.
 d3.json(data_file, function(error, root){
@@ -71,27 +68,7 @@ d3.json(data_file, function(error, root){
     root.sum(function(d) { return d.size; });
     current_root = root;
 
-
-    // partition
-    // 	.value(function() { return 1; })
-    // 	.nodes(root)
-    // 	.forEach(function(d) {
-    // 	    d.count = d.value;
-    // 	    d.x0 = d.x;
-    // 	    d.dx0 = d.dx;
-    // 	    d.fill = computeFill(d);
-    // 	    d.width = getTextWidth(d.name, "Open Sans 12pt");
-    // 	});
-    
-    // For efficiency, filter nodes to keep only those large enough to see.
-    // nodes = partition
-    // 	.value(function(d) {return d.size; })
-    // 	.nodes(root)
-    // 	.filter(function(d) {
-    // 	    return (d.dx > FILTER_THREASHOLD);
-    // 	});
-    // drawLegend(nodes[0]);
-    nodes = partition(root).descendants()
+    var nodes = partition(root).descendants()
 	.filter(function(d) { return ((d.x1-d.x0) > FILTER_THREASHOLD); });
     nodes.forEach(function(d) {
 	d.name = d.data.name;
@@ -128,12 +105,10 @@ d3.json(data_file, function(error, root){
 
     function click(d) {
 	current_root = d;
-	current_depth = d.depth;
 	totalSize = display_mode === "size"
 	    ? d.value
 	    : d.count;
 
-	// path.data(nodes)
 	svg
 	    .transition()
 	    .duration(1500)
@@ -147,20 +122,10 @@ d3.json(data_file, function(error, root){
 	    .attr("display", function(d) { return d.depth >= current_root.depth && d.depth !== 0
 	    				   ? "true"
 	    				   : "none";})
+	    .style("fill", computeFill)
 	    .attrTween("d", function(d) { return function() { return arc(d); }; });
     };
 });
-
-// function arcTween(d) {
-//     var xd = d3.interpolate(x.domain(), [d.x, d.x + d.dx]),
-// 	yd = d3.interpolate(y.domain(), [d.y * d.y, 1]),
-// 	yr = d3.interpolate(y.range(), [d.y ? 20 : 0, radius]);
-//     return function(d, i) {
-// 	return i
-// 	    ? function(t) { return arc(d); }
-// 	: function(t) { x.domain(xd(t)); y.domain(yd(t)).range(yr(t)); return arc(d); };
-//     };
-// }
 
 // Fade all but the current sequence, and show it in the breadcrumb trail.
 function mouseover(d) {
@@ -174,9 +139,21 @@ function mouseover(d) {
     if (percentage < 0.1) {
 	percentageString = "< 0.1%";
     }
+    var root_string = current_root.depth === 0
+	? "of all transactions"
+	: "of transactions with " + getAncestors(d).map(function(a) { return a.name; }).join(" ");
 
+    d3.select("#name")
+	.text(d.name);
+    
+    d3.select("#volume")
+	.text(volumeString);
+    
     d3.select("#percentage")
 	.text(percentageString);
+
+    d3.select("#root_string")
+	.text(root_string);
 
     d3.select("#explanation")
 	.style("visibility", "");
@@ -298,7 +275,7 @@ function updateBreadcrumbs(nodeArray, percentageString, volumeString) {
 	return "translate(" + translation + ", 0)";
     });
 
-        // Remove exiting nodes.
+    // Remove exiting nodes.
     g.exit().remove();
 
     // Now move and update the percentage at the end.
@@ -394,9 +371,9 @@ function computeColorDiff(hex1, hex2) {
 }
 
 function computeFill(d) {
-    return current_depth >=1
-	? colors(d.data.name)
-	: colors((d.children ? d : d.parent).data.name);
+    return current_root.depth >=1
+	? colors(d.name)
+	: colors((d.children ? d : d.parent).name);
 }
 
 function add(a, b){

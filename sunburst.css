@@ -42,7 +42,7 @@ body {
 
 #explanation {
   position: absolute;
-  top: 260px;
+  top: 215px;
   left: 305px;
   width: 140px;
   text-align: center;
@@ -50,6 +50,6 @@ body {
   z-index: 999;
 }
 
-#percentage {
+#name, #volume, #percentage {
   font-size: 2.5em;
 }
