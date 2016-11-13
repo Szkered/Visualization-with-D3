@@ -91,7 +91,8 @@ d3.json(data_file, function(error, root){
     // 	    return (d.dx > FILTER_THREASHOLD);
     // 	});
     // drawLegend(nodes[0]);
-    nodes = partition(root).descendants();
+    nodes = partition(root).descendants()
+	.filter(function(d) { return ((d.x1-d.x0) > FILTER_THREASHOLD); });
     nodes.forEach(function(d) {
 	d.name = d.data.name;
 	d.fill = computeFill(d);
