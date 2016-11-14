@@ -79,15 +79,15 @@ d3.json(data_file, function(error, root){
     
 
     var path = svg.selectAll("path")
-	    .data(nodes)
-	    .enter().append("svg:path")
-	    .attr("display", function(d) { return d.depth ? "true" : "none"; })
-	    .attr("d", arc)
-	    .attr("fill-rule", "evenodd")
-	    .style("fill", function(d) { return d.fill; })
-	    .style("opacity", function(d) { return d.depth ? 1 : 0; })
-	    .on("mouseover", mouseover)
-	    .on("click", click);
+	.data(nodes)
+	.enter().append("svg:path")
+	.attr("display", function(d) { return d.depth ? "true" : "none"; })
+	.attr("d", arc)
+	.attr("fill-rule", "evenodd")
+	.style("fill", function(d) { return d.fill; })
+	.style("opacity", function(d) { return d.depth ? 1 : 0; })
+	.on("mouseover", mouseover)
+	.on("click", click);
 
     // Add the mouseleave handler to the bounding circle.
     d3.select("#container").on("mouseleave", mouseleave);
@@ -162,7 +162,7 @@ function mouseover(d) {
     updateBreadcrumbs(sequenceArray, percentageString, volumeString);
 
     // Fade all the segments.
-    d3.selectAll("path")
+    svg.selectAll("path")
 	.style("opacity", 0.3);
 
     // Then highlight only those that are an ancestor of the current segment.

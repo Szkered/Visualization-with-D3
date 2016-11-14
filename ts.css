@@ -1,20 +1,36 @@
 .axis path,
 .axis line {
-  fill: none;
-  stroke: #000;
-  shape-rendering: crispEdges;
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
 }
 
 .dot {
-  stroke: #000;
+    padding: 10px;
+    border-style: none;
+}
+
+.dot:hover {
+    stroke: #999999;
 }
 
 .axis--x path {
-  display: none;
+    display: none;
+}
+
+#legend {
+    /* padding: -10px 0 0 0; */
+    margin-top: 20px;
+    margin-left: 30px;
+    margin-bottom: -100px;
 }
 
 .line {
-  fill: none;
-  stroke: steelblue;
-  stroke-width: 1.5px;
+    fill: none;
+    stroke: steelblue;
+    stroke-width: 1.5px;
 }
+
+/* #ts { */
+/*     margin-top: 120px; */
+/* } */
